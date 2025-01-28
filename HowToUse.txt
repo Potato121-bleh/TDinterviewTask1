@@ -1,0 +1,51 @@
+    * This API are developed & Maintenance by LY SOCHETRA *
+
+
+
+DISCLAIMER: This REST API are built for development environment & testing only and it not comparable for production use due to it security risks.
+
+
+
+The Usage of this API:
+    GET: All endpoint are available as for client to query as by Id, name, (image name in some cases) and query everything
+        This action can be achieved by: passing the url-query-params
+
+        Example: http://127.0.0.1:8000/shop/category/                   // Retrieve all data from category
+
+                 http://127.0.0.1:8000/shop/category/?id=10             // Retrieve data with id of 10
+
+                 http://127.0.0.1:8000/shop/category/?image=1.png       // Retrieve data with image name of 1.png
+
+    POST: All endpoint are available as for client to add new item such as category or product. Just to let you know that the core of create new item 
+                on both product and category are built dynamically so later on if you have any extra fields you can just update field in table of database.
+                without do any changes to the code. 
+         This action can be achieved by: 
+                                            Category:   send additional data with application/json                  (JSON)
+                                            Product:    send additional data and Image with multipart/form-data     (form-data)
+
+         NOTE: For product: Please be careful with insert new item of product endpoint since it accept your image as input it will store the incoming image in local folder in: apiApp/static/img
+
+    PATCH: All endpoint are available as for client to update any field (except id) the system are built dynamically, so later on we still can have more field in the future for both category & product.
+                Most important part is where we allow user to just type in the field they want to update, if i want to update just name: {"name": "new-name"} and done!! Only name field get updated
+         This action can be achieved by:    url-query-params
+
+         EXAMPLE:   http://127.0.0.1:8000/shop/category/?id=1           // This update just name field
+                    { 
+                        "name": "new-name"
+                    }
+
+                    http://127.0.0.1:8000/shop/product/?id=1           // This update just price field and left other field the same
+                    { 
+                        "price": 80
+                    }
+
+    DELETE: All endpoint are available as for client to delete any item via id
+            This action can be achieved by: send additional data ("id") with application/json                  (JSON)
+
+
+
+
+            After testing If you have any error or problems, Feel free to ask question and chat with Maintenancer
+
+            Contact:    +855 93 602 025
+            Email:      lysochetra95@gmail.com
