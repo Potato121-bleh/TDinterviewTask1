@@ -1,30 +1,84 @@
 from apiApp.ulti import sql_update_builder, sql_insert_builder
 from apiApp.models import ProductTB
 from django.db import connection, transaction
+from django.db.backends.utils import CursorWrapper
 from django.core.files.storage import FileSystemStorage
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import request
 
+def query_constructor(db_c: CursorWrapper, query_sql_statement, params, field=""):
+    """
+    This method allow you to construct the sql statement and perform the execution and return as list of turple of data
+
+    @ Parameters: 
+                    `db_c`: CursorWrapper   :   coming from connection.cursor() \n
+                    `query_sql_statement`: str  : which already built by previous builder \n
+                    `params` : dict[str, any]   : coming from request.data \n
+                    `field` : str   : to determine what field the constructor should working on \n
+
+    @ return: `list[tuple[Any, ...]]`
+
+
+    NOTE: This method are used only in GET Request in product only! it not dynamically built for other get request
+
+    .
+    """
+    if not field == "":
+        query_sql_statement += f" WHERE apiApp_producttb.{field} = %s"
+        db_c.execute(query_sql_statement, [params.get(field)])
+    else:
+        db_c.execute(query_sql_statement)
+    return db_c.fetchall()
 
 class ProductView(APIView):
     def get(self, request: request, *args, **kwargs):
         params = request.query_params
-        try:
-            if params.get("id"):
-                queried_data = ProductTB.objects.filter(id=params.get("id")).values()
-            elif params.get("name"):
-                queried_data = ProductTB.objects.filter(name=str(params.get("name")).lower()).values()
-            elif params.get("image"):
-                queried_data = ProductTB.objects.filter(image=str(params.get("image")).lower()).values()
+
+        # query column of producttb to determine the field, for dynamically operation
+        product_sample = ProductTB.objects.all().values()[0]
+        available_key = list(product_sample.keys())
+        query_sql_statement = "SELECT "
+
+        # FROM apiApp_producttb INNER JOIN apiApp_categorytb ON apiApp_producttb.Cat_id = apiApp_categorytb.id WHERE "
+        for i in range(len(available_key)):
+            if i == (len(available_key) - 1):
+                query_sql_statement += f" apiApp_categorytb.name AS 'cate' "
             else:
-                queried_data = ProductTB.objects.all().values()
+                query_sql_statement += f" apiApp_producttb.{available_key[i]} , "
+        
+        query_sql_statement += "FROM apiApp_producttb INNER JOIN apiApp_categorytb ON apiApp_producttb.Cat_id = apiApp_categorytb.id "
+
+        try:
+            with connection.cursor() as db_c:
+                if params.get("id"):
+                    queried_data = query_constructor(db_c, query_sql_statement, params, "id")
+
+                elif params.get("name"):
+                    queried_data = query_constructor(db_c, query_sql_statement, params, "name")
+
+                elif params.get("image"):
+                    queried_data = query_constructor(db_c, query_sql_statement, params, "image")
+                    
+                else:
+                    queried_data = queried_data = query_constructor(db_c, query_sql_statement, params)
+            
+            # construct new response data
+            response_dataset = []
+
+            # change original field to fit the need
+            available_key[-1] = "cate"
+            for element in queried_data:
+                prep_dataset = dict(zip(available_key, element))
+                response_dataset.append(prep_dataset)
+
+            
         except Exception as e:
             print(e)
             return Response({"Message": "Something went wrong with database query, Please try again"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"Message": queried_data})
+        return Response({"Message": response_dataset})
 
     def post(self, request: request, *args, **kwargs):
         request_data = request.POST
